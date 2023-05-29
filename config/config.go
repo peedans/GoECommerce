@@ -13,105 +13,69 @@ func LoadConfig(path string) IConfig {
 	if err != nil {
 		log.Fatalf("load dotenv failed: %v", err)
 	}
+
+	parseInt := func(key string) int {
+		value, err := strconv.Atoi(envMap[key])
+		if err != nil {
+			log.Fatalf("load %s failed: %v", key, err)
+		}
+		return value
+	}
+
+	parseDuration := func(key string) time.Duration {
+		value := parseInt(key)
+		return time.Duration(value) * time.Second
+	}
+
 	return &config{
 		app: &app{
-			host: envMap["APP_HOST"],
-			port: strconv.Itoa(func() int {
-				p, err := strconv.Atoi(envMap["APP_PORT"])
-				if err != nil {
-					log.Fatalf("load port failed: %v", err)
-				}
-				return p
-			}()),
-			name:    envMap["APP_NAME"],
-			version: envMap["APP_VERSION"],
-			readTimeout: func() time.Duration {
-				t, err := strconv.Atoi(envMap["APP_READ_TIMEOUT"])
-				if err != nil {
-					log.Fatalf("load read timeout failed: %v", err)
-				}
-				return time.Duration(t) * time.Second
-			}(),
-			writeTimeout: func() time.Duration {
-				t, err := strconv.Atoi(envMap["APP_WRTIE_TIMEOUT"])
-				if err != nil {
-					log.Fatalf("load write timeout failed: %v", err)
-				}
-				return time.Duration(t) * time.Second
-			}(),
-			bodyLimit: func() int {
-				b, err := strconv.Atoi(envMap["APP_BODY_LIMIT"])
-				if err != nil {
-					log.Fatalf("load body limit failed: %v", err)
-				}
-				return b
-			}(),
-			fileLimit: func() int {
-				f, err := strconv.Atoi(envMap["APP_FILE_LIMIT"])
-				if err != nil {
-					log.Fatalf("load file limit failed: %v", err)
-				}
-				return f
-			}(),
-			gcpbucket: envMap["APP_GCP_BUCKET"],
+			host:         envMap["APP_HOST"],
+			port:         parseInt("APP_PORT"),
+			name:         envMap["APP_NAME"],
+			version:      envMap["APP_VERSION"],
+			readTimeout:  parseDuration("APP_READ_TIMEOUT"),
+			writeTimeout: parseDuration("APP_WRITE_TIMEOUT"),
+			bodyLimit:    parseInt("APP_BODY_LIMIT"),
+			fileLimit:    parseInt("APP_FILE_LIMIT"),
+			gcpbucket:    envMap["APP_GCP_BUCKET"],
 		},
 		db: &db{
-			host: envMap["DB_HOST"],
-			port: strconv.Itoa(func() int {
-				p, err := strconv.Atoi(envMap["DB_PORT"])
-				if err != nil {
-					log.Fatalf("load port failed: %v", err)
-				}
-				return p
-			}()),
-			protocol: envMap["DB_PROTOCOL"],
-			username: envMap["DB_USERNAME"],
-			password: envMap["DB_PASSWORD"],
-			database: envMap["DB_DATABASE"],
-			sslMode:  envMap["DB_SSL_MODE"],
-			maxConnections: func() int {
-				m, err := strconv.Atoi(envMap["DB_MAX_CONNECTIONS"])
-				if err != nil {
-					log.Fatalf("load db max connertions failed: %v", err)
-				}
-				return m
-			}(),
+			host:           envMap["DB_HOST"],
+			port:           parseInt("DB_PORT"),
+			protocol:       envMap["DB_PROTOCOL"],
+			username:       envMap["DB_USERNAME"],
+			password:       envMap["DB_PASSWORD"],
+			database:       envMap["DB_DATABASE"],
+			sslMode:        envMap["DB_SSL_MODE"],
+			maxConnections: parseInt("DB_MAX_CONNECTIONS"),
 		},
 		jwt: &jwt{
-			adminKey:  envMap["JWT_SECRET_KEY"],
-			secretKey: envMap["JWT_ADMIN_KEY"],
-			apiKey:    envMap["JWT_API_KEY"],
-			accessExpiresAt: func() int {
-				t, err := strconv.Atoi(envMap["JWT_ACCESS_EXPIRES"])
-				if err != nil {
-					log.Fatalf("load accrss expires failed: %v", err)
-				}
-				return t
-			}(),
-			refreshExpiresAt: func() int {
-				t, err := strconv.Atoi(envMap["JWT_REFRESH_EXPIRES"])
-				if err != nil {
-					log.Fatalf("load refresh expires failed: %v", err)
-				}
-				return t
-			}(),
+			adminKey:         envMap["JWT_SECRET_KEY"],
+			secretKey:        envMap["JWT_ADMIN_KEY"],
+			apiKey:           envMap["JWT_API_KEY"],
+			accessExpiresAt:  parseInt("JWT_ACCESS_EXPIRES"),
+			refreshExpiresAt: parseInt("JWT_REFRESH_EXPIRES"),
 		},
 	}
 }
 
+// 2
 type config struct {
 	app *app
 	db  *db
 	jwt *jwt
 }
 
+// IConfig 6
 type IConfig interface {
 	App() IAppConfig
 	Db() IDbConfig
 	Jwt() IJwtConfig
 }
 
+// IAppConfig 7
 type IAppConfig interface {
+	//host:port
 	Url() string
 	Name() string
 	Version() string
@@ -122,9 +86,10 @@ type IAppConfig interface {
 	GCPBucket() string
 }
 
+// 3
 type app struct {
 	host         string
-	port         string
+	port         int
 	name         string
 	version      string
 	readTimeout  time.Duration
@@ -134,9 +99,12 @@ type app struct {
 	gcpbucket    string
 }
 
+// App 10
 func (c *config) App() IAppConfig {
 	return c.app
 }
+
+// Url 11
 func (a *app) Url() string                 { return fmt.Sprintf("%s:%d", a.host, a.port) }
 func (a *app) Name() string                { return a.name }
 func (a *app) Version() string             { return a.version }
@@ -146,14 +114,16 @@ func (a *app) BodyLimit() int              { return a.bodyLimit }
 func (a *app) FileLimit() int              { return a.fileLimit }
 func (a *app) GCPBucket() string           { return a.gcpbucket }
 
+// 8
 type IDbConfig interface {
 	Url() string
 	MaxOpenConns() int
 }
 
+// 4
 type db struct {
 	host           string
-	port           string
+	port           int
 	protocol       string
 	username       string
 	password       string
@@ -167,13 +137,14 @@ func (c *config) Db() IDbConfig {
 }
 
 func (d *db) Url() string {
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", d.host, d.port, d.username, d.password, d.database, d.sslMode)
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", d.host, d.port, d.username, d.password, d.database, d.sslMode)
 }
 
 func (d *db) MaxOpenConns() int {
 	return d.maxConnections
 }
 
+// 9
 type IJwtConfig interface {
 	SecretKey() []byte
 	AdminKey() []byte
@@ -184,6 +155,7 @@ type IJwtConfig interface {
 	SetJwtRefreshExpires(t int)
 }
 
+// 5
 type jwt struct {
 	adminKey         string
 	secretKey        string

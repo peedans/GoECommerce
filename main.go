@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"github.com/peedans/GoEcommerce/config"
+	"github.com/peedans/GoEcommerce/modules/servers"
+	"github.com/peedans/GoEcommerce/pkg/databases"
 	"os"
 )
 
@@ -16,5 +17,9 @@ func envPath() string {
 
 func main() {
 	cfg := config.LoadConfig(envPath())
-	fmt.Println(cfg)
+
+	db := databases.DbConnect(cfg.Db())
+	defer db.Close()
+
+	servers.NewServer(cfg, db).Start()
 }
